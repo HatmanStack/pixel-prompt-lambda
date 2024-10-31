@@ -1,7 +1,5 @@
 import random
 from huggingface_hub import InferenceClient, login
-from transformers import AutoTokenizer
-from pydantic import BaseModel
 from gradio_client import Client, file
 import re
 from datetime import datetime
@@ -14,18 +12,16 @@ from PIL import Image
 from io import BytesIO
 import aiohttp
 import asyncio
-from typing import Optional
 from dotenv import load_dotenv
 import boto3
 from groq import Groq
 
-groqClient = Groq (api_key=os.environ.get("GROQ_API_KEY"))
-
 load_dotenv()
 token = os.environ.get("HF_TOKEN")
-login(token)
-
-prompt_model = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+groqClient = Groq (api_key=os.environ.get("GROQ_API_KEY"))
+aws_id = os.environ.get("AWS_ID")
+aws_secret = os.environ.get("AWS_SECRET")
+prompt_model = "llama-3.1-8b-instant"
 magic_prompt_model = "Gustavosta/MagicPrompt-Stable-Diffusion"
 options = {"use_cache": False, "wait_for_model": True}
 parameters = {"return_full_text":False, "max_new_tokens":300}
@@ -35,7 +31,6 @@ perm_negative_prompt = "watermark, lowres, low quality, worst quality, deformed,
 cwd = os.getcwd()
 pictures_directory = os.path.join(cwd, 'pictures')
 last_two_models = []
-
 
 def getPrompt(prompt, modelID, attempts=1):
     response = {}
@@ -47,7 +42,7 @@ def getPrompt(prompt, modelID, attempts=1):
                 {"role": "assistant", "content": prompt_assistant},
                 {"role": "user", "content": prompt},
                 ]
-            response = groqClient.chat.completions.create(messages=chat, temperature=1, max_tokens=2048, top_p=1, stream=False, stop=None, model=modelID) 
+            response = groqClient.chat.completions.create(messages=chat, temperature=1, max_tokens=2048, top_p=1, stream=False, stop=None, model=prompt_model) 
         else:
             apiData={"inputs":prompt, "parameters": parameters, "options": options, "timeout": 45}
             response = requests.post(API_URL + modelID, headers=headers, data=json.dumps(apiData))
@@ -69,14 +64,14 @@ def inferencePrompt(itemString):
     except Exception as e:
         returnJson = {"plain": f'An Error occured: {e}', "magic": f'An Error occured: {e}'}
 
-async def wake_model(modelID):
+def wake_model(modelID):
     data = {"inputs":"wake up call", "options":options}
     headers = {"Authorization": f"Bearer {token}"}
     api_data = json.dumps(data)
     try:
         timeout = aiohttp.ClientTimeout(total=60)  # Set timeout to 60 seconds
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(API_URL + modelID, headers=headers, data=api_data) as response:
+        with aiohttp.ClientSession(timeout=timeout) as session:
+            with session.post(API_URL + modelID, headers=headers, data=api_data) as response:
                 pass
         print('Model Waking')
         
@@ -95,19 +90,28 @@ def formatReturn(result):
 
 def save_image(base64image, item, model, NSFW):
     if not NSFW:
-        data = {"base64image": "data:image/png;base64," + base64image, "returnedPrompt": "Model:\n" + model + "\n\nPrompt:\n" + item.prompt, "prompt": item.prompt, "steps": item.steps, "guidance": item.guidance, "control": item.control, "target": item.target}
+        data = {
+            "base64image": "data:image/png;base64," + base64image,
+            "returnedPrompt": "Model:\n" + model + "\n\nPrompt:\n" + item.get('prompt'),
+            "prompt": item.get('prompt'),
+            "steps": item.get('steps'),
+            "guidance": item.get('guidance'),
+            "control": item.get('control'),
+            "target": item.get('target')
+        }
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        file_path = os.path.join(pictures_directory, f'{timestamp}.json')
-        with open(file_path, 'w') as json_file:
-            json.dump(data, json_file)
+        s3_key = f'images/{timestamp}.json'
+        session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
+        s3_client = session.client('s3')
+        s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
 
 def gradioSD3(item):
-    client = Client(item.modelID, hf_token=token)
+    client = Client(item.get('modelID'), hf_token=token)
     result = client.predict(
-            prompt=item.prompt,
+            prompt=item.get('prompt'),
             negative_prompt=perm_negative_prompt,
-            guidance_scale=item.guidance,
-            num_inference_steps=item.steps,
+            guidance_scale=item.get('guidance'),
+            num_inference_steps=item.get('steps'),
             api_name="/infer"
     )
     return formatReturn(result[0])
@@ -115,11 +119,11 @@ def gradioSD3(item):
 def gradioAuraFlow(item):
     client = Client("multimodalart/AuraFlow")
     result = client.predict(
-            prompt=item.prompt,
+            prompt=item.get('prompt'),
             negative_prompt=perm_negative_prompt,
             randomize_seed=True,
-            guidance_scale=item.guidance,
-            num_inference_steps=item.steps,
+            guidance_scale=item.get('guidance'),
+            num_inference_steps=item.get('steps'),
             api_name="/infer"
     )
     print(result[0])
@@ -127,19 +131,19 @@ def gradioAuraFlow(item):
 
 def gradioHatmanInstantStyle(item):
     client = Client("Hatman/InstantStyle")
-    image_stream = BytesIO(base64.b64decode(item.image.split("base64,")[1]))
+    image_stream = BytesIO(base64.b64decode(item.get('image').split("base64,")[1]))
     image = Image.open(image_stream)
     image.save("style.png")
     result = client.predict(
             image_pil=file("style.png"),
-            prompt=item.prompt,
+            prompt=item.get('prompt'),
             n_prompt=perm_negative_prompt,
             scale=1,
-            control_scale=item.control,
-            guidance_scale=item.guidance,
-            num_inference_steps=item.steps,
+            control_scale=item.get('control'),
+            guidance_scale=item.get('guidance'),
+            num_inference_steps=item.get('steps'),
             seed=1,
-            target=item.target,
+            target=item.get('target'),
             api_name="/create_image"
     )
     return formatReturn(result)
@@ -150,11 +154,9 @@ def lambda_image(prompt, modelID):
     "modelID": modelID
     }
     serialized_data = json.dumps(data)
-    aws_id = os.environ.get("AWS_ID")
-    aws_secret = os.environ.get("AWS_SECRET")
-    aws_region = os.environ.get("AWS_REGION")
+    
     try:
-        session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name=aws_region)
+        session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-1')
         lambda_client = session.client('lambda')
         response = lambda_client.invoke(
             FunctionName='pixel_prompt_lambda',
@@ -172,9 +174,9 @@ def inferenceAPI(model, item, attempts = 1):
     print(f'Inference model {model}')
     if attempts > 5:
         return 'An error occured when Processing', model
-    prompt = item.prompt
+    prompt = item.get('prompt')
     if "dallinmackay" in model:
-        prompt = "lvngvncnt, " + item.prompt
+        prompt = "lvngvncnt, " + item.get('prompt')
     data = {"inputs":prompt, "negative_prompt": perm_negative_prompt, "options":options, "timeout": 45}
     api_data = json.dumps(data)
     try:
@@ -184,8 +186,8 @@ def inferenceAPI(model, item, attempts = 1):
         print(response.content[0:200])
         image_stream = BytesIO(response.content)
         image = Image.open(image_stream)
-        image.save("response.png")
-        with open('response.png', 'rb') as f:
+        image.save("/tmp/response.png")
+        with open('/tmp/response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
         return model, base64_img
     except Exception as e:
@@ -205,6 +207,12 @@ def get_random_model(models):
         "stabilityai/stable-diffusion-3.5-large-turbo",
         "stabilityai/stable-diffusion-3.5-large",
         "black-forest-labs",
+        "stabilityai/stable-diffusion-3.5-large-turbo",
+        "stabilityai/stable-diffusion-3.5-large",
+        "black-forest-labs",
+        "stabilityai/stable-diffusion-3.5-large-turbo",
+        "stabilityai/stable-diffusion-3.5-large",
+        "black-forest-labs",
         "kandinsky-community",
         "Kolors-diffusers",
         "Juggernaut",
@@ -213,6 +221,7 @@ def get_random_model(models):
         "digiautogpt3",
         "fluently"
     ]
+    random.shuffle(priorities)
     
     for priority in priorities:
         for i, model_name in enumerate(models):
@@ -232,11 +241,11 @@ def get_random_model(models):
 def nsfw_check(item, attempts=1):
     try:
         API_URL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection"
-        with open('response.png', 'rb') as f:
+        with open('/tmp/response.png', 'rb') as f:
             data = f.read()
         response = requests.request("POST", API_URL, headers=headers, data=data)
         decoded_response = response.content.decode("utf-8")
-        print(item.prompt)
+        print(item.get('prompt'))
         print(decoded_response)
         
         json_response = json.loads(decoded_response)
@@ -257,39 +266,37 @@ def nsfw_check(item, attempts=1):
             return True
         return nsfw_check(item, attempts+1)
     
-    
-
-async def inference(item):
+def inference(item):
     print("Start API Inference")
     activeModels = InferenceClient().list_deployed_models()
     base64_img = ""
-    model = item.modelID
+    model = item.get('modelID')
     print(f'Start Model {model}')
     NSFW = False
     try:
-        if item.image:
+        if item.get('image'):
             model = "stabilityai/stable-diffusion-xl-base-1.0"
             base64_img = gradioHatmanInstantStyle(item)
-        elif "AuraFlow" in item.modelID:
+        elif "AuraFlow" in item.get('modelID'):
             base64_img = gradioAuraFlow(item)
-        elif "Random" in item.modelID:
+        elif "Random" in item.get('modelID'):
             model = get_random_model(activeModels['text-to-image'])
             pattern = r'^(.{1,30})\/(.{1,50})$'
             if not re.match(pattern, model):
                 raise ValueError("Model not Valid")
             model, base64_img= inferenceAPI(model, item) 
-        elif "stable-diffusion-3" in item.modelID:
+        elif "stable-diffusion-3" in item.get('modelID'):
             base64_img = gradioSD3(item)
-        elif "Voxel" in item.modelID or "pixel" in item.modelID:
-            prompt = item.prompt
-            if "Voxel" in item.modelID:
-                prompt = "voxel style, " + item.prompt
-            base64_img = lambda_image(prompt, item.modelID)
-        elif item.modelID not in activeModels['text-to-image']:
-            asyncio.create_task(wake_model(item.modelID))
+        elif "Voxel" in item.get('modelID') or "pixel" in item.get('modelID'):
+            prompt = item.get('prompt')
+            if "Voxel" in item.get('modelID'):
+                prompt = "voxel style, " + item.get('prompt')
+            base64_img = lambda_image(prompt, item.get('modelID'))
+        elif item.get('modelID') not in activeModels['text-to-image']:
+            asyncio.create_task(wake_model(item.get('modelID')))
             return {"output": "Model Waking"}  
         else:
-            base64_img, model = inferenceAPI(item.modelID, item)
+            base64_img, model = inferenceAPI(item.get('modelID'), item)
         if 'error' in base64_img:
             return {"output": base64_img, "model": model}
         NSFW = nsfw_check(item)
@@ -319,7 +326,6 @@ Remember:\
 
 prompt_assistant = "I am ready to return a prompt that is between 90 and 100 tokens.  What is your seed string?"
 
-
 def lambda_handler(event, context):
     task = event.get('task')
     print(task)
@@ -333,3 +339,4 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'body': json.dumps(returnJson)
     }
+
