@@ -258,8 +258,7 @@ def inference(item):
         '''
         if "True Random" in item.get('modelID'):
             models = activeModels['text-to-image']
-            model = random.shuffle(models)[0]
-            model, base64_img= inferenceAPI(model, item) 
+            model, base64_img= inferenceAPI(random.choice(models), item) 
         elif "Random" in item.get('modelID'):
             model = get_random_model(activeModels['text-to-image'])
             pattern = r'^(.{1,30})\/(.{1,50})$'
