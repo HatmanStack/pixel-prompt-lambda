@@ -41,12 +41,9 @@ All the models are opensource and available on HuggingFace.
 - **Random**
 - **stabilityai/stable-diffusion-3.5**
 - **black-forest-labs/FLUX**
-- **fal/AuraFlow**
-- **stabilityai/stable-diffusion-3-medium**
 - **stabilityai/stable-diffusion-xl-base-1.0**
 - **nerijs/pixel-art-xl**
 - **Fictiverse/Voxel_XL_Lora**
-- **dallinmackay/Van-Gogh-diffusion**
 - **gsdf/Counterfeit-V2.5**
 
 ### Prompts

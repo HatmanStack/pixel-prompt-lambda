@@ -64,23 +64,27 @@ def inferencePrompt(itemString):
     except Exception as e:
         returnJson = {"plain": f'An Error occured: {e}', "magic": f'An Error occured: {e}'}
 
-def wake_model(modelID):
-    data = {"inputs":"wake up call", "options":options}
+async def wake_model(modelID):
+    print("Waking Model")
+    data = {"inputs": "wake up call", "options": options}
     headers = {"Authorization": f"Bearer {token}"}
     api_data = json.dumps(data)
+    timeout = 5
     try:
-        timeout = aiohttp.ClientTimeout(total=60)  # Set timeout to 60 seconds
-        with aiohttp.ClientSession(timeout=timeout) as session:
-            with session.post(API_URL + modelID, headers=headers, data=api_data) as response:
-                pass
-        print('Model Waking')
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_URL + modelID, headers=headers, data=api_data, timeout=timeout) as response:
+                if response.status == 200:
+                    print('Model Waking')
+                else:
+                    print(f'Failed to wake model: {response.status} - {await response.text()}')
         
     except Exception as e:
         print(f"An error occurred: {e}")        
 
 def formatReturn(result):
+    print(f'Formatting Return:  {result[0,25]}')
     img = Image.open(result)
-    img.save("test.png")
+    img.save("/tmp/test.png", overwrite=True)  # Overwrite if the image exists
     img_byte_arr = BytesIO()
     img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
@@ -105,37 +109,13 @@ def save_image(base64image, item, model, NSFW):
         s3_client = session.client('s3')
         s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
 
-def gradioSD3(item):
-    client = Client(item.get('modelID'), hf_token=token)
-    result = client.predict(
-            prompt=item.get('prompt'),
-            negative_prompt=perm_negative_prompt,
-            guidance_scale=item.get('guidance'),
-            num_inference_steps=item.get('steps'),
-            api_name="/infer"
-    )
-    return formatReturn(result[0])
-
-def gradioAuraFlow(item):
-    client = Client("multimodalart/AuraFlow")
-    result = client.predict(
-            prompt=item.get('prompt'),
-            negative_prompt=perm_negative_prompt,
-            randomize_seed=True,
-            guidance_scale=item.get('guidance'),
-            num_inference_steps=item.get('steps'),
-            api_name="/infer"
-    )
-    print(result[0])
-    return formatReturn(result[0]["value"])
-
 def gradioHatmanInstantStyle(item):
     client = Client("Hatman/InstantStyle")
     image_stream = BytesIO(base64.b64decode(item.get('image').split("base64,")[1]))
     image = Image.open(image_stream)
-    image.save("style.png")
+    image.save("/tmp/style.png",overwrite=True)
     result = client.predict(
-            image_pil=file("style.png"),
+            image_pil=file("/tmp/style.png"),
             prompt=item.get('prompt'),
             n_prompt=perm_negative_prompt,
             scale=1,
@@ -146,6 +126,7 @@ def gradioHatmanInstantStyle(item):
             target=item.get('target'),
             api_name="/create_image"
     )
+    
     return formatReturn(result)
 
 def lambda_image(prompt, modelID):
@@ -167,7 +148,7 @@ def lambda_image(prompt, modelID):
         response_data = json.loads(response_payload)
     except Exception as e:
         print(f"An error occurred: {e}")     
-
+    print(response_data["body"][0,20])
     return response_data['body']
 
 def inferenceAPI(model, item, attempts = 1):
@@ -186,7 +167,7 @@ def inferenceAPI(model, item, attempts = 1):
         print(response.content[0:200])
         image_stream = BytesIO(response.content)
         image = Image.open(image_stream)
-        image.save("/tmp/response.png")
+        image.save("/tmp/response.png",overwrite=True)
         with open('/tmp/response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
         return model, base64_img
@@ -204,15 +185,11 @@ def get_random_model(models):
     global last_two_models
     model = None
     priorities = [
+        "stabilityai/stable-diffusion-3.5-large-turbo", 
+        "black-forest-labs",
+        "stabilityai/stable-diffusion-3.5-large-turbo",     
         "stabilityai/stable-diffusion-3.5-large-turbo",
         "stabilityai/stable-diffusion-3.5-large",
-        "black-forest-labs",
-        "stabilityai/stable-diffusion-3.5-large-turbo",
-        "stabilityai/stable-diffusion-3.5-large",
-        "black-forest-labs",
-        "stabilityai/stable-diffusion-3.5-large-turbo",
-        "stabilityai/stable-diffusion-3.5-large",
-        "black-forest-labs",
         "kandinsky-community",
         "Kolors-diffusers",
         "Juggernaut",
@@ -274,29 +251,28 @@ def inference(item):
     print(f'Start Model {model}')
     NSFW = False
     try:
+        '''
         if item.get('image'):
             model = "stabilityai/stable-diffusion-xl-base-1.0"
             base64_img = gradioHatmanInstantStyle(item)
-        elif "AuraFlow" in item.get('modelID'):
-            base64_img = gradioAuraFlow(item)
+        '''
+        if "True Random" in item.get('modelID'):
+            models = activeModels['text-to-image']
+            model = random.shuffle(models)[0]
+            model, base64_img= inferenceAPI(model, item) 
         elif "Random" in item.get('modelID'):
             model = get_random_model(activeModels['text-to-image'])
             pattern = r'^(.{1,30})\/(.{1,50})$'
             if not re.match(pattern, model):
                 raise ValueError("Model not Valid")
             model, base64_img= inferenceAPI(model, item) 
-        elif "stable-diffusion-3" in item.get('modelID'):
-            base64_img = gradioSD3(item)
         elif "Voxel" in item.get('modelID') or "pixel" in item.get('modelID'):
             prompt = item.get('prompt')
             if "Voxel" in item.get('modelID'):
                 prompt = "voxel style, " + item.get('prompt')
             base64_img = lambda_image(prompt, item.get('modelID'))
-        elif item.get('modelID') not in activeModels['text-to-image']:
-            asyncio.create_task(wake_model(item.get('modelID')))
-            return {"output": "Model Waking"}  
         else:
-            base64_img, model = inferenceAPI(item.get('modelID'), item)
+            model, base64_img = inferenceAPI(item.get('modelID'), item)
         if 'error' in base64_img:
             return {"output": base64_img, "model": model}
         NSFW = nsfw_check(item)
