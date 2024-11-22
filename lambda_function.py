@@ -82,9 +82,9 @@ async def wake_model(modelID):
         print(f"An error occurred: {e}")        
 
 def formatReturn(result):
-    print(f'Formatting Return:  {result[0,25]}')
+    print(result)
     img = Image.open(result)
-    img.save("/tmp/test.png", overwrite=True)  # Overwrite if the image exists
+    img.save("/tmp/response.png", overwrite=True)  # Overwrite if the image exists
     img_byte_arr = BytesIO()
     img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
@@ -222,8 +222,7 @@ def nsfw_check(item, attempts=1):
             data = f.read()
         response = requests.request("POST", API_URL, headers=headers, data=data)
         decoded_response = response.content.decode("utf-8")
-        print(item.get('prompt'))
-        print(decoded_response)
+        print("Raw response:", decoded_response)
         
         json_response = json.loads(decoded_response)
         
@@ -232,8 +231,11 @@ def nsfw_check(item, attempts=1):
             return nsfw_check(item, attempts+1)
         
         scores = {item['label']: item['score'] for item in json_response}
-        error_msg = scores.get('nsfw', 0) > .1
-        return error_msg
+        nsfw_score = scores.get('nsfw', 0)
+        print(f"NSFW Score: {nsfw_score}")
+        print(f"Type of score: {type(nsfw_score)}")
+        print(f"Comparison result: {nsfw_score > 0.1}")
+        return nsfw_score > 0.1
     except json.JSONDecodeError as e:
         print(f'JSON Decoding Error: {e}')
         return True
@@ -251,12 +253,12 @@ def inference(item):
     print(f'Start Model {model}')
     NSFW = False
     try:
-        '''
+        
         if item.get('image'):
             model = "stabilityai/stable-diffusion-xl-base-1.0"
             base64_img = gradioHatmanInstantStyle(item)
-        '''
-        if "True Random" in item.get('modelID'):
+        
+        elif "True Random" in item.get('modelID'):
             models = activeModels['text-to-image']
             model, base64_img= inferenceAPI(random.choice(models), item) 
         elif "Random" in item.get('modelID'):
