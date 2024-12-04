@@ -93,8 +93,7 @@ def formatReturn(result):
     return base64_img
 
 def save_image(base64image, item, model, NSFW):
-    if not NSFW:
-        data = {
+    data = {
             "base64image": "data:image/png;base64," + base64image,
             "returnedPrompt": "Model:\n" + model + "\n\nPrompt:\n" + item.get('prompt'),
             "prompt": item.get('prompt'),
@@ -103,11 +102,16 @@ def save_image(base64image, item, model, NSFW):
             "control": item.get('control'),
             "target": item.get('target')
         }
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
+    s3_client = session.client('s3')
+    if not NSFW:
         s3_key = f'images/{timestamp}.json'
-        session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
-        s3_client = session.client('s3')
         s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
+    s3_key = f'prompts/{timestamp}.json'
+    data.pop("base64image", None)
+    s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
+    
 
 def gradioHatmanInstantStyle(item):
     client = Client("Hatman/InstantStyle")
