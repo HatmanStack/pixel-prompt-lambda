@@ -40,6 +40,8 @@ All the models are opensource and available on HuggingFace.
 
 - **Random**
 - **stabilityai/stable-diffusion-3.5**
+- **OpenAI Dalle3**
+- **AWS Nova Canvas**
 - **black-forest-labs/FLUX**
 - **stabilityai/stable-diffusion-xl-base-1.0**
 - **nerijs/pixel-art-xl**

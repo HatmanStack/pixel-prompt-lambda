@@ -9,3 +9,4 @@ safetensors
 gradio_client
 boto3
 groq
+openai
