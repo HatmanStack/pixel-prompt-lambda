@@ -15,7 +15,22 @@ def formatReturn(result):
     base64_img = base64.b64encode(img_byte_arr).decode('utf-8')
     return base64_img
 
+def update_timestamps(s3_client):
+    bucket_name = 'pixel-prompt'
+    key = 'rate-limit/ratelimit.json'
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=key)
+        rate_limit_data = json.loads(response['Body'].read().decode('utf-8'))
+    except s3_client.exceptions.NoSuchKey:
+        rate_limit_data = {"timestamps": []}
+    
+    rate_limit_data["timestamps"].append(datetime.now().isoformat())
+    
+    s3_client.put_object(Bucket=bucket_name, Key=key, Body=json.dumps(rate_limit_data), ContentType='application/json')
+
+
 def save_image(base64image, item, model, NSFW):
+    print('save_image start')
     data = {
         "base64image": "data:image/png;base64," + base64image,
         "returnedPrompt": "Model:\n" + model + "\n\nPrompt:\n" + item.get('prompt'),
@@ -34,4 +49,5 @@ def save_image(base64image, item, model, NSFW):
     s3_key = f'prompts/{timestamp}.json'
     data.pop("base64image", None)
     s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
+    update_timestamps(s3_client)
 
