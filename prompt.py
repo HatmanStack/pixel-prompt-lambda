@@ -1,12 +1,13 @@
 import requests
 import json
-from config import magic_prompt_model, API_URL, headers, parameters, prompt_model, groq_api_key, options, token
+from config import API_URL, headers, parameters, options
 
 def getPrompt(prompt, attempts=1):
     response = {}
     try:
+        prefix = f'enhance prompt: {prompt}'
         apiData = {"inputs": prompt, "parameters": parameters, "options": options, "timeout": 45}
-        response = requests.post(API_URL + "gokaygokay/Flux-Prompt-Enhance", headers=headers, data=json.dumps(apiData))
+        response = requests.post(API_URL + "succinctly/text2image-prompt-generator", headers=headers, data=json.dumps(apiData))
         return response.json()
     except Exception as e:
         print(f"An error occurred: {e}")
