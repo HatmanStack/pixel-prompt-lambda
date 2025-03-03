@@ -9,7 +9,7 @@ from io import BytesIO
 import openai
 from gradio_client import Client, file
 from huggingface_hub import InferenceClient
-from config import API_URL, headers, perm_negative_prompt, options, openai_api_key
+from config import API_URL, headers, perm_negative_prompt, options, openai_api_key, token
 from image_processing import formatReturn, save_image
 from aws_utils import lambda_image, nova_canvas
 
@@ -21,10 +21,12 @@ def inferenceAPI(model, item, attempts=1):
         prompt = "lvngvncnt, " + item.get('prompt')
     data = {"inputs": prompt, "negative_prompt": perm_negative_prompt, "options": options, "timeout": 45}
     api_data = json.dumps(data)
+    print(f'API DATA: {api_data}')
     try:
         response = requests.request("POST", API_URL + model, headers=headers, data=api_data)
         if response is None:
-            inferenceAPI(get_random_model(activeModels['text-to-image']), item, attempts + 1)
+            return("Error in Inference")
+        
         image_stream = BytesIO(response.content)
         image = Image.open(image_stream)
         image.save("/tmp/response.png", overwrite=True)
@@ -33,12 +35,13 @@ def inferenceAPI(model, item, attempts=1):
         return model, base64_img
     except Exception as e:
         print(f'Error When Processing Image: {e}')
-        activeModels = InferenceClient().list_deployed_models()
-        model = get_random_model(activeModels['text-to-image'])
-        pattern = r'^(.{1,30})\/(.{1,50})$'
-        if not re.match(pattern, model):
-            return "error model not valid", model
-        return inferenceAPI(model, item, attempts + 1)
+        #activeModels = InferenceClient().list_deployed_models()
+        #model = get_random_model(activeModels['text-to-image'])
+        #pattern = r'^(.{1,30})\/(.{1,50})$'
+        #if not re.match(pattern, model):
+            #return "error model not valid", model
+        #return inferenceAPI(model, item, attempts + 1)
+        return 'Error When Calling Model'
 
 def get_random_model(models):
     model = None
@@ -46,7 +49,7 @@ def get_random_model(models):
         "stabilityai/stable-diffusion-3.5-large-turbo",
         "black-forest-labs",
         "stabilityai/stable-diffusion-3.5-large-turbo",
-        "stabilityai/stable-diffusion-3.5-large-turbo",
+        "deepseek-ai/Janus-Pro-7B",
         "stabilityai/stable-diffusion-3.5-large",
         "kandinsky-community",
         "Kolors-diffusers",
@@ -143,7 +146,12 @@ def dalle3(item):
     return None
 
 def inference(item):
-    activeModels = InferenceClient().list_deployed_models()
+    print('inference start')
+    #client = InferenceClient(token=token)  # token optional for some operations
+
+    # Get the list of deployed models
+    #deployed_models = client.list_deployed_models()
+    #print(deployed_models)
     base64_img = ""
     model = item.get('modelID')
     check_img = False
@@ -153,6 +161,11 @@ def inference(item):
             base64_img = gradioHatmanInstantStyle(item)
         elif "stabilityai/stable-diffusion-3.5-large-turbo" in item.get('modelID'):
             model, base64_img = inferenceAPI(item.get('modelID'), item)
+        elif "deepseek-ai/Janus-Pro-7B" in item.get('modelID'):
+            model, base64_img = inferenceAPI(item.get('modelID'), item)
+        elif "forest" in item.get('modelID'):
+            print('test')
+            model, base64_img = inferenceAPI(item.get('modelID'), item)
         elif "OpenAI Dalle3" in item.get('modelID'):
             model = 'OpenAI Dalle3' 
             base64_img = dalle3(item)
@@ -161,22 +174,13 @@ def inference(item):
             base64_img = nova_canvas(item)
         elif "stabilityai/stable-diffusion-3.5-large" in item.get('modelID'):
             model, base64_img = inferenceAPI(item.get('modelID'), item)
-        elif "True Random" in item.get('modelID'):
-            models = activeModels['text-to-image']
-            model, base64_img = inferenceAPI(random.choice(models), item)
-        elif "Random" in item.get('modelID'):
-            model = get_random_model(activeModels['text-to-image'])
-            pattern = r'^(.{1,30})\/(.{1,50})$'
-            if not re.match(pattern, model):
-                raise ValueError("Model not Valid")
-            model, base64_img = inferenceAPI(model, item)
         elif "Voxel" in item.get('modelID') or "pixel" in item.get('modelID'):
             prompt = item.get('prompt')
             if "Voxel" in item.get('modelID'):
                 prompt = "voxel style, " + item.get('prompt')
             base64_img = lambda_image(prompt, item.get('modelID'))
         else:
-            model, base64_img = inferenceAPI(item.get('modelID'), item)
+            model, base64_img = item.get('modelID'), "Error in Inference"
         if 'error' in base64_img:
             return {"output": base64_img, "model": model}
         check_img = image_check(item)
