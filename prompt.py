@@ -21,6 +21,44 @@ Remember:\
 
 prompt_assistant = "I am ready to return a prompt that is between 90 and 100 tokens.  What is your seed string?"
 
+prompt_check_base = """
+You are an expert content analyzer specializing in evaluating text prompts intended for diffusion text-to-image models. Your sole task is to determine whether a given prompt contains vulgar, explicit, inappropriate, or NSFW content.
+
+For each prompt submitted to you, carefully analyze the text and return ONLY a single word response:
+- Return "True" if the prompt contains vulgar, explicit, sexual, offensive, or inappropriate content
+- Return "False" if the prompt contains only appropriate, safe-for-work content
+
+When analyzing prompts, consider:
+- Explicit sexual references or terminology
+- Graphic violence or gore descriptions
+- Hate speech or discriminatory language
+- Drug use or illegal activity descriptions
+- Obscene language or profanity
+- Implicit vulgar content through euphemisms or innuendo
+- Content that would be inappropriate in professional settings
+
+Examples:
+Prompt: "A beautiful mountain landscape at sunset with purple sky"
+Response: False
+
+Prompt: "Naked woman in provocative pose"
+Response: True
+
+Prompt: "Colorful birds flying over a tropical forest"
+Response: False
+
+Prompt: "Man violently attacking another person with blood"
+Response: True
+
+Do not explain your reasoning or provide any additional text in your response. Return ONLY "True" or "False" based on your analysis.
+"""
+
+prompt_check_assistant = """
+I'll analyze the text prompt for any vulgar, explicit, inappropriate, or NSFW content that would be unsuitable for generating images.
+
+Based on my analysis, I'll return either True (contains vulgar content) or False (does not contain vulgar content).
+"""
+
 def getPrompt(prompt, attempts=1):
     response = {}
     try:
@@ -41,9 +79,30 @@ def getPrompt(prompt, attempts=1):
             getPrompt(prompt, attempts + 1)
     return response.json()
 
-def inferencePrompt(itemString):
+def prompt_check(prompt):
     try:
-        response = getPrompt(itemString)
+        chat = [
+                {"role": "user", "content": prompt_check_base},
+                {"role": "assistant", "content": prompt_check_assistant},
+                {"role": "user", "content": f'Thank you. Now analyze this prompt: {prompt}'},
+            ]
+        response = groqClient.chat.completions.create(
+            messages=chat, temperature=1, max_tokens=2048, top_p=1, stream=False, stop=None, model=prompt_model
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return {"plain": f'An Error occurred: {e}'}
+
+def inferencePrompt(item):
+    try:
+        prompt_check_response = False
+        print(item.get('saftey'))
+        if 'True' in item.get('saftey'):
+            prompt_check_response = prompt_check(item.get('itemString'))
+        if('True' in prompt_check_response):
+            return {"plain": f'Sorry, that seed prompt doesn\'t work for me'}
+        else:
+            response = getPrompt(itemString)
         return {"plain": response}
     except Exception as e:
         return {"plain": f'An Error occurred: {e}'}

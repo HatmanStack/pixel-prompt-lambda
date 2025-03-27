@@ -46,6 +46,9 @@ def save_image(base64image, item, model, NSFW):
     if not NSFW:
         s3_key = f'images/{timestamp}.json'
         s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
+    else:
+        s3_key = f'nondisplay_images/{timestamp}.json'
+        s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
     s3_key = f'prompts/{timestamp}.json'
     data.pop("base64image", None)
     s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))

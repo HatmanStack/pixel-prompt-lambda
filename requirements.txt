@@ -8,5 +8,6 @@ aiohttp
 safetensors
 gradio_client
 boto3
+google
 groq
 openai

@@ -15,7 +15,11 @@ def lambda_handler(event, context):
     
 
     if task == "text":
-        returnJson = inferencePrompt(event.get('itemString'))
+        returnJson = inferencePrompt(event)
+    elif task == "image":
+        
+        print(f'EVENT STRING: {event}')
+        returnJson = inference(event)
     else:
         if rate_limit_exceeded(s3_client):
             return {
@@ -43,7 +47,7 @@ def rate_limit_exceeded(s3_client):
     
     rate_limit_data["timestamps"] = [ts.isoformat() for ts in recent_timestamps]
     
-    if len(recent_timestamps) >= 4:  
+    if len(recent_timestamps) >= 8:  
         return True
     
     return False
