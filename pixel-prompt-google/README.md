@@ -22,7 +22,7 @@ To install and run the application:
  pip install -r requirements.txt --target .
  ```
 Then zip all the files in the directory and upload to your Lambda function with the correct version of python.
-Include these in the environment variables of your lambda.  Create two functions to account for size cap of individual lambda functions.
+Include these in the environment variables of your lambda.
 
    ```shell
   AWS_ID=<ID>

@@ -6,11 +6,9 @@ import base64
 import time
 from PIL import Image
 from io import BytesIO
-import openai
 from prompt import prompt_check
-from gradio_client import Client, file
 from huggingface_hub import InferenceClient
-from config import API_URL, headers, perm_negative_prompt, options, openai_api_key, token
+from config import API_URL, headers, perm_negative_prompt, options
 from image_processing import formatReturn, save_image
 from utils import dalle3, nova_canvas, gemini_2, imagen_3
 

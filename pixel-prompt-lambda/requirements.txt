@@ -3,10 +3,9 @@ requests
 huggingface_hub
 transformers
 sentencepiece
-protobuf>=3.20.2,<5.0.0
+protobuf
 aiohttp
 boto3
-google
 groq
 openai
 python-dotenv
