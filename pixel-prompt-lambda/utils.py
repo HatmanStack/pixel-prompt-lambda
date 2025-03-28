@@ -2,9 +2,10 @@ import boto3
 import json
 import base64
 import openai
+import requests
 from PIL import Image
 from io import BytesIO
-from config import aws_id, aws_secret, openai_api_key,
+from config import aws_id, aws_secret, openai_api_key
 
 def dalle3(item):
     openai.api_key = openai_api_key
@@ -25,9 +26,9 @@ def dalle3(item):
         image_stream = BytesIO(image_data)
         image = Image.open(image_stream)
         image.save("/tmp/response.png", overwrite=True)
-        print('Image Saved')
-        base64_image = base64.b64encode(image_data).decode('utf-8')
-        return base64_image
+        with open('/tmp/response.png', 'rb') as f:
+            base64_img = base64.b64encode(f.read()).decode('utf-8')
+        return base64_img
     return None
 
 def nova_canvas(item):
@@ -46,6 +47,7 @@ def nova_canvas(item):
             "seed": 0
         }
     })
+
     session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-east-1')
     bedrock = session.client('bedrock-runtime')
     accept = "application/json"

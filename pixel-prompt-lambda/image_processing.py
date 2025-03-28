@@ -29,7 +29,7 @@ def update_timestamps(s3_client):
     s3_client.put_object(Bucket=bucket_name, Key=key, Body=json.dumps(rate_limit_data), ContentType='application/json')
 
 
-def save_image(base64image, item, model, NSFW):
+def save_image(base64image, item, model, goodImage):
     print('save_image start')
     data = {
         "base64image": "data:image/png;base64," + base64image,
@@ -43,10 +43,13 @@ def save_image(base64image, item, model, NSFW):
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
     s3_client = session.client('s3')
-    if not NSFW:
+    print(goodImage)
+    if goodImage:
+        print("goodImage")
         s3_key = f'images/{timestamp}.json'
         s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
     else:
+        print("badImage")
         s3_key = f'nondisplay_images/{timestamp}.json'
         s3_client.put_object(Bucket='pixel-prompt', Key=s3_key, Body=json.dumps(data))
     s3_key = f'prompts/{timestamp}.json'

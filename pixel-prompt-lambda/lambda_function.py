@@ -13,20 +13,15 @@ def lambda_handler(event, context):
     session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
     s3_client = session.client('s3')
     
-    if task == "text":
-        returnJson = inferencePrompt(event)
-    elif task == "image":
-        
-        print(f'EVENT STRING: {event}')
-        returnJson = inference(event)
+    if rate_limit_exceeded(s3_client):
+        returnJson = {'output': 'Rate limit exceeded'}
     else:
-        if rate_limit_exceeded(s3_client):
-            return {
-                'statusCode': 429,
-                'body': json.dumps({'output': 'Rate limit exceeded'})
-            }
-        returnJson = inference(event)
-    
+        if task == "text":
+            returnJson = inferencePrompt(event)
+        elif task == "image":
+            
+            print(f'EVENT STRING: {event}')
+            returnJson = inference(event)
     return {
         'statusCode': 200,
         'body': json.dumps(returnJson)

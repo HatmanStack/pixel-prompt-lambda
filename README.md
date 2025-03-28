@@ -34,24 +34,20 @@ Include these in the environment variables of your lambda.  Create two functions
 
 ## Models :sparkles:
 
-All the models are opensource and available on HuggingFace.
+All the models are SOTA and some are available on HuggingFace.
        
 ### Diffusion
 
-- **Random**
-- **stabilityai/stable-diffusion-3.5**
+- **Stable Diffusion**
 - **OpenAI Dalle3**
 - **AWS Nova Canvas**
-- **black-forest-labs/FLUX**
-- **stabilityai/stable-diffusion-xl-base-1.0**
-- **nerijs/pixel-art-xl**
-- **Fictiverse/Voxel_XL_Lora**
-- **gsdf/Counterfeit-V2.5**
+- **Black Forest Labs**
+- **Gemini 2.0**
+- **Imagen 3.0**
 
 ### Prompts
 
-- **llama-3.1-8b-instant**
-- **Gustavosta/MagicPrompt-Stable-Diffusion**
+- **llama-3.3-70b-versatile**
 
 ## License
 

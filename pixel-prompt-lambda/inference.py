@@ -9,8 +9,8 @@ from io import BytesIO
 from prompt import prompt_check
 from huggingface_hub import InferenceClient
 from config import API_URL, headers, perm_negative_prompt, options
-from image_processing import formatReturn, save_image
-from utils import dalle3, nova_canvas, gemini_2, imagen_3
+from image_processing import save_image
+from utils import dalle3, nova_canvas
 
 def inferenceAPI(model, item, attempts=1):
     if attempts > 5:
@@ -18,20 +18,21 @@ def inferenceAPI(model, item, attempts=1):
     prompt = item.get('prompt')
     if "dallinmackay" in model:
         prompt = "lvngvncnt, " + item.get('prompt')
-    data = {"inputs": prompt, "negative_prompt": perm_negative_prompt, "options": options, "timeout": 45}
+    data = {"inputs": prompt, "negative_prompt": perm_negative_prompt, "options": options, "timeout": 120}
     api_data = json.dumps(data)
     print(f'API DATA: {api_data}')
     try:
         response = requests.request("POST", API_URL + model, headers=headers, data=api_data)
         if response is None:
             return("Error in Inference")
-        
         image_stream = BytesIO(response.content)
         image = Image.open(image_stream)
         image.save("/tmp/response.png", overwrite=True)
         with open('/tmp/response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
+        
         return model, base64_img
+        
     except Exception as e:
         print(f'Error When Processing Image: {e}')
         #activeModels = InferenceClient().list_deployed_models()
@@ -72,6 +73,7 @@ def get_random_model(models):
 
 def image_check(item, attempts=1):
     try:
+        print("image check")
         API_URL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection"
         with open('/tmp/response.png', 'rb') as f:
             data = f.read()
@@ -90,7 +92,7 @@ def image_check(item, attempts=1):
         print(f"NSFW Score: {nsfw_score}")
         print(f"Type of score: {type(nsfw_score)}")
         print(f"Comparison result: {nsfw_score > 0.1}")
-        return nsfw_score > 0.1
+        return nsfw_score < 0.3
     except json.JSONDecodeError as e:
         print(f'JSON Decoding Error: {e}')
         return True
@@ -110,18 +112,10 @@ def inference(item):
     base64_img = "An error occurred: You're a Jerk"
     model = item.get('modelID')
     check_img = False
-    if 'True' in prompt_check(item.get('prompt')):  
+    if prompt_check(item.get('prompt')) and item.get('safety'):  
         return {"output": base64_img , "model": model, "NSFW": check_img}
     try:
-        if item.get('image'):
-            model = "stabilityai/stable-diffusion-xl-base-1.0"
-            base64_img = gradioHatmanInstantStyle(item)
-        elif "stabilityai/stable-diffusion-3.5-large-turbo" in item.get('modelID'):
-            model, base64_img = inferenceAPI(item.get('modelID'), item)
-        elif "deepseek-ai/Janus-Pro-7B" in item.get('modelID'):
-            model, base64_img = inferenceAPI(item.get('modelID'), item)
-        elif "forest" in item.get('modelID'):
-            print('test')
+        if "stable-diffusion" in item.get('modelID') or 'forest' in item.get('modelID'):
             model, base64_img = inferenceAPI(item.get('modelID'), item)
         elif "OpenAI Dalle3" in item.get('modelID'):
             model = 'OpenAI Dalle3' 
@@ -129,22 +123,15 @@ def inference(item):
         elif "AWS Nova Canvas" in item.get('modelID'):
             model = 'AWS Nova Canvas'
             base64_img = nova_canvas(item)
-        elif "stabilityai/stable-diffusion-3.5-large" in item.get('modelID'):
-            model, base64_img = inferenceAPI(item.get('modelID'), item)
-        elif "Gemini" in item.get('modelID'):
-            model = 'Gemini 2.0'
-            base64_image = gemini_2(item)
-        elif "Imagen" in item.get('modelID'):
-            model = 'Imagen 3.0'
-            base64_image = imagen_3(item)
         else:
             model, base64_img = item.get('modelID'), "Error in Inference"
         if 'error' in base64_img:
             return {"output": base64_img, "model": model}
-        if 'True' in item.get('saftey'):
+        if item.get('safety'):
             check_img = image_check(item)
         else:
-            check_img = True
+            check_img = False
+        print(check_img)
         save_image(base64_img, item, model, check_img)
     except Exception as e:
         print(f"An error occurred: {e}")

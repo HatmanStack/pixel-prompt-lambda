@@ -1,17 +1,16 @@
 import boto3
 import json
 import base64
-from google import genai
+import google.genai as genai
 from google.genai import types
 from PIL import Image
 from io import BytesIO
-from config import aws_id, aws_secret, gpc_api_key, 
+from config import aws_id, aws_secret, gpc_api_key
 
 def gemini_2(item):
     client = genai.Client(api_key=gpc_api_key)
-
     contents = item.get('prompt')
-
+    
     response = client.models.generate_content(
         model="gemini-2.0-flash-exp-image-generation",
         contents=contents,
@@ -24,10 +23,14 @@ def gemini_2(item):
         if part.text is not None:
             print(part.text)
         elif part.inline_data is not None:
-            image = Image.open(BytesIO((part.inline_data.data)))
+            image_stream = part.inline_data.data
+            image = Image.open(BytesIO((image_stream)))
             image.save("/tmp/response.png", overwrite=True)
-            return part.inline_data.data
-            
+            with open('/tmp/response.png', 'rb') as f:
+                base64_img = base64.b64encode(f.read()).decode('utf-8')
+            print(base64_img[:150])
+            return base64_img
+
 def imagen_3(item):
     client = genai.Client(api_key=gpc_api_key)
     prompt = item.get('prompt')
@@ -39,9 +42,11 @@ def imagen_3(item):
         )
     )
     for generated_image in response.generated_images:
-        image = Image.open(BytesIO(generated_image.image.image_bytes))
+        image_stream = generated_image.image.image_bytes
+        image = Image.open(BytesIO(image_stream))
         image.save("/tmp/response.png", overwrite=True)
-        # make sure this returns a base64 encoded string
-        print(f'IMAGE: {generated_image.image.image_bytes}')
-        return generated_image.image.image_bytes
+        with open('/tmp/response.png', 'rb') as f:
+            base64_img = base64.b64encode(f.read()).decode('utf-8')
+        
+        return base64_img
 

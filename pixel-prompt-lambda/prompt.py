@@ -70,7 +70,6 @@ def getPrompt(prompt, attempts=1):
         response = groqClient.chat.completions.create(
             messages=chat, temperature=1, max_tokens=2048, top_p=1, stream=False, stop=None, model=prompt_model
         )
-        print(response)
         return response.choices[0].message.content
         
     except Exception as e:
@@ -89,20 +88,28 @@ def prompt_check(prompt):
         response = groqClient.chat.completions.create(
             messages=chat, temperature=1, max_tokens=2048, top_p=1, stream=False, stop=None, model=prompt_model
         )
-        return response.choices[0].message.content
+        response_content = response.choices[0].message.content.strip().lower()
+        print(response_content)
+        if "true" in response_content:
+            return True
+        elif "false" in response_content:
+            return False
+        else:
+            raise ValueError(f"Unexpected response content: {response_content}")
     except Exception as e:
-        return {"plain": f'An Error occurred: {e}'}
+        print(f"An error occurred in prompt_check: {e}")
+        return False 
 
 def inferencePrompt(item):
     try:
         prompt_check_response = False
-        print(item.get('saftey'))
-        if 'True' in item.get('saftey'):
+        print(item.get('safety'))
+        if item.get('safety'):
             prompt_check_response = prompt_check(item.get('itemString'))
-        if('True' in prompt_check_response):
+        if prompt_check_response:
             return {"plain": f'Sorry, that seed prompt doesn\'t work for me'}
         else:
-            response = getPrompt(itemString)
+            response = getPrompt(item.get('itemString'))
         return {"plain": response}
     except Exception as e:
         return {"plain": f'An Error occurred: {e}'}

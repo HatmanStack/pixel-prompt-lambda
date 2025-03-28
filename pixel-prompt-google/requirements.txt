@@ -1,11 +1,4 @@
 Pillow
-requests
-huggingface_hub
-transformers
-sentencepiece
-protobuf>=3.20.2,<5.0.0
-aiohttp
 boto3
-google-generativeai
-groq
+google-genai
 python-dotenv

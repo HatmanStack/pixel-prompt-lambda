@@ -6,15 +6,6 @@ from datetime import datetime
 import boto3
 from config import aws_id, aws_secret
 
-def formatReturn(result):
-    img = Image.open(result)
-    img.save("/tmp/response.png", overwrite=True)
-    img_byte_arr = BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr = img_byte_arr.getvalue()
-    base64_img = base64.b64encode(img_byte_arr).decode('utf-8')
-    return base64_img
-
 def update_timestamps(s3_client):
     bucket_name = 'pixel-prompt'
     key = 'rate-limit/ratelimit.json'
