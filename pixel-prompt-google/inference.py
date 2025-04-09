@@ -6,7 +6,7 @@ import base64
 import time
 from PIL import Image
 from image_processing import save_image
-from utils import gemini_2, imagen_3
+from utils import gemini_2, imagen_3, recraft_3
 
 def inference(item):
     #client = InferenceClient(token=token)  # token optional for some operations
@@ -25,6 +25,9 @@ def inference(item):
         elif "Imagen" in item.get('modelID'):
             model = 'Imagen 3.0'
             base64_img = imagen_3(item)
+        elif "Recraft" in item.get('modelID'):
+            model = 'Recraft v3'
+            base64_img = recraft_3(item)
         else:
             model, base64_img = item.get('modelID'), "Error in Inference"
         if item.get('saftey'):

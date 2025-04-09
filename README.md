@@ -10,7 +10,7 @@ To preview the application visit the hosted version on AWS [here](https://produc
 
 Before running this application locally, ensure that you have the following dependencies installed on your machine:
 
-- Python
+- Python 3.12
 - pip
 - [groq](https://groq.com/) account
 
