@@ -2,8 +2,10 @@ from inference import inference
 from config import aws_id, aws_secret
 import json
 import boto3
+import os
 from datetime import datetime, timedelta
 
+rate_limit = int(os.environ.get("RATE_LIMIT"))  # Default to 100 if not set
 def lambda_handler(event, context):
     task = event.get('task')
     print(task)
@@ -35,7 +37,7 @@ def rate_limit_exceeded(s3_client):
     
     rate_limit_data["timestamps"] = [ts.isoformat() for ts in recent_timestamps]
     
-    if len(recent_timestamps) >= 100:  
+    if len(recent_timestamps) >= rate_limit:  
         return True
     
     return False

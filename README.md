@@ -29,7 +29,10 @@ Include these in the environment variables of your lambda.  Create two functions
   AWS_SECRET=<secret>
   GROQ_API_KEY=<key>
   HF_TOKEN=<token>
-  HF_HOME=/tmp/huggingface
+  GPC_API_KEY=<token>
+  RECRAFT_API_KEY=<token>
+  OPENAI_API_KEY=<token>
+   RATE_LIMIT=<number>
    ```
 
 ## Models :sparkles:
