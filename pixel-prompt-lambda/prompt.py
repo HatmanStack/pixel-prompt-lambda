@@ -100,12 +100,16 @@ def prompt_check(prompt):
         print(f"An error occurred in prompt_check: {e}")
         return False 
 
+def string_to_bool(value):
+    if isinstance(value, str):
+        return value.lower() == 'true'
+    return bool(value)
+    
 def inferencePrompt(item):
     try:
         prompt_check_response = False
-        print(item.get('safety'))
-        if item.get('safety'):
-            prompt_check_response = prompt_check(item.get('itemString'))
+        if True:#item.get('safety'):
+            prompt_check_response = string_to_bool(prompt_check(item.get('prompt')))
         if prompt_check_response:
             return {"plain": f'Sorry, that seed prompt doesn\'t work for me'}
         else:

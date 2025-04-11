@@ -10,6 +10,7 @@ import requests
 from config import gpc_api_key, recraft_api_key
 
 def gemini_2(item):
+    print("gemini_2")
     client = genai.Client(api_key=gpc_api_key)
     contents = item.get('prompt')
     

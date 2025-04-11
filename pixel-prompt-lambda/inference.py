@@ -43,77 +43,18 @@ def inferenceAPI(model, item, attempts=1):
         #return inferenceAPI(model, item, attempts + 1)
         return 'Error When Calling Model'
 
-def get_random_model(models):
-    model = None
-    priorities = [
-        "stabilityai/stable-diffusion-3.5-large-turbo",
-        "black-forest-labs",
-        "stabilityai/stable-diffusion-3.5-large-turbo",
-        "deepseek-ai/Janus-Pro-7B",
-        "stabilityai/stable-diffusion-3.5-large",
-        "kandinsky-community",
-        "Kolors-diffusers",
-        "Juggernaut",
-        "insaneRealistic",
-        "MajicMIX",
-        "digiautogpt3",
-        "fluently"
-    ]
-    random.shuffle(priorities)
-
-    for priority in priorities:
-        for i, model_name in enumerate(models):
-            if priority in model_name:
-                model = models[i]
-                break
-    if model is None:
-        print("Choosing randomly")
-        model = random.choice(models)
-    return model
-
-def image_check(item, attempts=1):
-    try:
-        print("image check")
-        API_URL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection"
-        with open('/tmp/response.png', 'rb') as f:
-            data = f.read()
-        response = requests.request("POST", API_URL, headers=headers, data=data)
-        decoded_response = response.content.decode("utf-8")
-        print("Raw response:", decoded_response)
-        
-        json_response = json.loads(decoded_response)
-        
-        if "error" in json_response:
-            time.sleep(json_response["estimated_time"])
-            return image_check(item, attempts+1)
-        
-        scores = {item['label']: item['score'] for item in json_response}
-        nsfw_score = scores.get('nsfw', 0)
-        print(f"NSFW Score: {nsfw_score}")
-        print(f"Type of score: {type(nsfw_score)}")
-        print(f"Comparison result: {nsfw_score > 0.1}")
-        return nsfw_score < 0.3
-    except json.JSONDecodeError as e:
-        print(f'JSON Decoding Error: {e}')
-        return True
-    except Exception as e:
-        print(f'NSFW Check Error: {e}')
-        if attempts > 30:
-            return True
-        return image_check(item, attempts+1)
-
+def string_to_bool(value):
+    if isinstance(value, str):
+        return value.lower() == 'true'
+    return bool(value)
+    
 def inference(item):
     print('inference start')
-    #client = InferenceClient(token=token)  # token optional for some operations
-
-    # Get the list of deployed models
-    #deployed_models = client.list_deployed_models()
-    #print(deployed_models)
     base64_img = "An error occurred: You're a Jerk"
     model = item.get('modelID')
-    check_img = False
-    if prompt_check(item.get('prompt')) and item.get('safety'):  
-        return {"output": base64_img , "model": model, "NSFW": check_img}
+    
+    if string_to_bool(prompt_check(item.get('prompt'))):  
+        return {"output": base64_img , "model": model, "NSFW": True}
     try:
         if "stable-diffusion" in item.get('modelID') or 'forest' in item.get('modelID'):
             model, base64_img = inferenceAPI(item.get('modelID'), item)
@@ -127,13 +68,9 @@ def inference(item):
             model, base64_img = item.get('modelID'), "Error in Inference"
         if 'error' in base64_img:
             return {"output": base64_img, "model": model}
-        if item.get('safety'):
-            check_img = image_check(item)
-        else:
-            check_img = False
-        print(check_img)
-        save_image(base64_img, item, model, check_img)
+        
+        save_image(base64_img, item, model)
     except Exception as e:
         print(f"An error occurred: {e}")
         base64_img = f"An error occurred: {e}"
-    return {"output": base64_img, "model": model, "NSFW": check_img}
+    return {"output": base64_img, "model": model, "NSFW": False}
