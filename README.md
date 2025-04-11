@@ -32,7 +32,8 @@ Include these in the environment variables of your lambda.  Create two functions
   GPC_API_KEY=<token>
   RECRAFT_API_KEY=<token>
   OPENAI_API_KEY=<token>
-   RATE_LIMIT=<number>
+   GLOBAL_LIMIT=<number>
+   IP_LIMIT=<number>
    ```
 
 ## Models :sparkles:
@@ -41,10 +42,13 @@ All the models are SOTA and some are available on HuggingFace.
        
 ### Diffusion
 
-- **Stable Diffusion**
+- **Stable Diffusion Large**
+- **Stable Diffusion Turbo**
+- **Black Forest Schnell**
+- **Black Forest Developer**
+- **Recraft v3**
 - **OpenAI Dalle3**
 - **AWS Nova Canvas**
-- **Black Forest Labs**
 - **Gemini 2.0**
 - **Imagen 3.0**
 

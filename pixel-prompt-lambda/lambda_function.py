@@ -15,6 +15,7 @@ def lambda_handler(event, context):
     s3_client = session.client('s3')
     
     if rate_limit_exceeded(s3_client, event.get('ip')):
+        print("Rate limit exceeded")
         returnJson = {'output': 'Rate limit exceeded'}
     else:
         if task == "text":
