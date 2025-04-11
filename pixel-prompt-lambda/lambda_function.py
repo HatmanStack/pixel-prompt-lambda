@@ -1,13 +1,11 @@
 from prompt import inferencePrompt
 from inference import inference
-from config import aws_id, aws_secret
+from config import aws_id, aws_secret, global_limit, ip_limit
 import json
 import boto3
 import os
 from datetime import datetime, timedelta
 
-rate_limit = int(os.environ.get("RATE_LIMIT")) 
- # Default to 100 if not set
 def lambda_handler(event, context):
     task = event.get('task')
     print(task)
@@ -16,7 +14,7 @@ def lambda_handler(event, context):
     session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
     s3_client = session.client('s3')
     
-    if rate_limit_exceeded(s3_client):
+    if rate_limit_exceeded(s3_client, event.get('ip')):
         returnJson = {'output': 'Rate limit exceeded'}
     else:
         if task == "text":
@@ -30,21 +28,45 @@ def lambda_handler(event, context):
         'body': json.dumps(returnJson)
     }
 
-def rate_limit_exceeded(s3_client):
+def rate_limit_exceeded(s3_client, ip):
     bucket_name = 'pixel-prompt'
     key = 'rate-limit/ratelimit.json'
     try:
         response = s3_client.get_object(Bucket=bucket_name, Key=key)
         rate_limit_data = json.loads(response['Body'].read().decode('utf-8'))
     except s3_client.exceptions.NoSuchKey:
-        rate_limit_data = {"timestamps": []}
+        rate_limit_data = {
+            "global_requests": [],
+            "ip_requests": {}
+        }
     
-    one_hour_ago = datetime.now() - timedelta(hours=1)
-    recent_timestamps = [datetime.fromisoformat(ts) for ts in rate_limit_data["timestamps"] if datetime.fromisoformat(ts) > one_hour_ago]
+    current_time = datetime.now().isoformat()
+    one_hour_ago = (datetime.now() - timedelta(hours=1)).isoformat()
+    one_day_ago = (datetime.now() - timedelta(days=1)).isoformat()
     
-    rate_limit_data["timestamps"] = [ts.isoformat() for ts in recent_timestamps]
+    # Clean up and update global requests (all requests regardless of IP)
+    rate_limit_data["global_requests"] = [ts for ts in rate_limit_data["global_requests"] if ts > one_hour_ago]
+    rate_limit_data["global_requests"].append(current_time)
     
-    if len(recent_timestamps) >= rate_limit:  
+    # Initialize IP entry if it doesn't exist
+    if ip not in rate_limit_data["ip_requests"]:
+        rate_limit_data["ip_requests"][ip] = []
+    
+    # Clean up and update IP-specific requests
+    rate_limit_data["ip_requests"][ip] = [ts for ts in rate_limit_data["ip_requests"][ip] if ts > one_day_ago]
+    rate_limit_data["ip_requests"][ip].append(current_time)
+    
+    # Save updated rate limit data
+    s3_client.put_object(
+        Bucket=bucket_name,
+        Key=key,
+        Body=json.dumps(rate_limit_data)
+    )
+    
+    if len(rate_limit_data["global_requests"]) > global_limit:
+        return True
+    
+    if len(rate_limit_data["ip_requests"][ip]) > ip_limit:
         return True
     
     return False

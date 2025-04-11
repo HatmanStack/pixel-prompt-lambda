@@ -22,25 +22,29 @@ def inferenceAPI(model, item, attempts=1):
     api_data = json.dumps(data)
     print(f'API DATA: {api_data}')
     try:
+        print(f'MODEL INFERNCE START: {model}')
         response = requests.request("POST", API_URL + model, headers=headers, data=api_data)
         if response is None:
             return("Error in Inference")
+        models = {
+            "stabilityai/stable-diffusion-3.5-large-turbo": "Stable Diffusion 3.5 Turbo", 
+            "black-forest-labs/FLUX.1-schnell": "Black Forest Schnell", 
+            "stabilityai/stable-diffusion-3.5-large": "Stable Diffusion 3.5 Large",
+            "black-forest-labs/FLUX.1-dev": "Black Forest Developer"
+        }
+           
+        returnModel =  models[model]       
         image_stream = BytesIO(response.content)
-        image = Image.open(image_stream)
-        image.save("/tmp/response.png", overwrite=True)
-        with open('/tmp/response.png', 'rb') as f:
+        image = Image.open(image_stream)      
+
+        image.save(f'/tmp/{returnModel.replace(' ', '-')}response.png', overwrite=True)
+        with open(f'/tmp/{returnModel.replace(' ', '-')}response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
-        
-        return model, base64_img
+        print(f'MODEL INFERNCE END SUCCESS: {model}')
+        return returnModel, base64_img
         
     except Exception as e:
         print(f'Error When Processing Image: {e}')
-        #activeModels = InferenceClient().list_deployed_models()
-        #model = get_random_model(activeModels['text-to-image'])
-        #pattern = r'^(.{1,30})\/(.{1,50})$'
-        #if not re.match(pattern, model):
-            #return "error model not valid", model
-        #return inferenceAPI(model, item, attempts + 1)
         return 'Error When Calling Model'
 
 def string_to_bool(value):
