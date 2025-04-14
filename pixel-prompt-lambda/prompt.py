@@ -1,7 +1,7 @@
 import requests
 import json
 from groq import Groq
-from config import magic_prompt_model, API_URL, headers, parameters, prompt_model, groq_api_key, options, token
+from config import prompt_model, groq_api_key
 
 groqClient = Groq(api_key=groq_api_key)
 

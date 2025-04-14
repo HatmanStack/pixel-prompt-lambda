@@ -22,7 +22,7 @@ def save_image(base64image, item, model):
     session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
     s3_client = session.client('s3')
     
-    s3_key = f'group-images/{item.get('target')}/{timestamp}.json'
+    s3_key = f'group-images/{item.get('target')}/{model.replace(' ', '-')}-{timestamp}.json'
     print(s3_key)
     print(json.dumps(data))
     

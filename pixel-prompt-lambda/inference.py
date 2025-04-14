@@ -7,14 +7,12 @@ import time
 from PIL import Image
 from io import BytesIO
 from prompt import prompt_check
-from huggingface_hub import InferenceClient
 from config import API_URL, headers, perm_negative_prompt, options
 from image_processing import save_image
 from utils import dalle3, nova_canvas
 
-def inferenceAPI(model, item, attempts=1):
-    if attempts > 5:
-        return 'An error occurred when Processing', model
+def inferenceAPI(model, item):
+    
     prompt = item.get('prompt')
     if "dallinmackay" in model:
         prompt = "lvngvncnt, " + item.get('prompt')
@@ -36,9 +34,8 @@ def inferenceAPI(model, item, attempts=1):
         returnModel =  models[model]       
         image_stream = BytesIO(response.content)
         image = Image.open(image_stream)      
-
-        image.save(f'/tmp/{returnModel.replace(' ', '-')}response.png', overwrite=True)
-        with open(f'/tmp/{returnModel.replace(' ', '-')}response.png', 'rb') as f:
+        image.save(f'/tmp/{item.get('target')}-{returnModel.replace(' ', '-')}response.png', overwrite=True)
+        with open(f'/tmp/{item.get('target')}-{returnModel.replace(' ', '-')}response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
         print(f'MODEL INFERNCE END SUCCESS: {model}')
         return returnModel, base64_img

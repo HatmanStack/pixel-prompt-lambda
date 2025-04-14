@@ -25,8 +25,8 @@ def dalle3(item):
         image_data = image_response.content
         image_stream = BytesIO(image_data)
         image = Image.open(image_stream)
-        image.save(f'/tmp/{item.get("modelID")}response.png', overwrite=True)
-        with open(f'/tmp/{item.get("modelID")}response.png', 'rb') as f:
+        image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+        with open(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
         return base64_img
     return None
@@ -60,5 +60,5 @@ def nova_canvas(item):
     image_data = base64.b64decode(base64_image)
     image_stream = BytesIO(image_data)
     image = Image.open(image_stream)
-    image.save(f'/tmp/{item.get("modelID")}response.png', overwrite=True)
-    return base64_image  # Directly return the base64 encoded string
+    image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+    return base64_image

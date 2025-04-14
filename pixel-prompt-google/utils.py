@@ -28,8 +28,8 @@ def gemini_2(item):
         elif part.inline_data is not None:
             image_stream = part.inline_data.data
             image = Image.open(BytesIO((image_stream)))
-            image.save(f'/tmp/{item.get("modelID")}response.png', overwrite=True)
-            with open(f'/tmp/{item.get("modelID")}response.png', 'rb') as f:
+            image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+            with open(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', 'rb') as f:
                 base64_img = base64.b64encode(f.read()).decode('utf-8')
             print(base64_img[:150])
             return base64_img
@@ -47,8 +47,8 @@ def imagen_3(item):
     for generated_image in response.generated_images:
         image_stream = generated_image.image.image_bytes
         image = Image.open(BytesIO(image_stream))
-        image.save(f'/tmp/{item.get("modelID")}response.png', overwrite=True)
-        with open(f'/tmp/{item.get("modelID")}response.png', 'rb') as f:
+        image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+        with open(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
         
         return base64_img
@@ -79,10 +79,8 @@ def recraft_3(item):
     if image_response.status_code == 200:
         # Save the image
         image = Image.open(BytesIO(image_response.content))
-        image.save(f'/tmp/{item.get("modelID")}response.png')
-        
-        # Convert to base64
-        with open(f'/tmp/{item.get("modelID")}response.png', 'rb') as f:
+        image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+        with open(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', 'rb') as f:
             base64_img = base64.b64encode(f.read()).decode('utf-8')
         
         return base64_img
