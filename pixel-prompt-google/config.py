@@ -11,3 +11,4 @@ groq_api_key = os.environ.get("GROQ_API_KEY")
 global_limit = int(os.environ.get("GLOBAL_LIMIT"))  
 ip_limit = int(os.environ.get("IP_LIMIT"))
 prompt_model = "llama-3.3-70b-versatile"
+ip_include = os.environ.get("IP_INCLUDE")

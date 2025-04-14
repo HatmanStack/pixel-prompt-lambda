@@ -9,14 +9,11 @@ from io import BytesIO
 from prompt import prompt_check
 from config import API_URL, headers, perm_negative_prompt, options
 from image_processing import save_image
-from utils import dalle3, nova_canvas
+from utils import dalle3, nova_canvas, stable_diffusion
 
 def inferenceAPI(model, item):
-    
     prompt = item.get('prompt')
-    if "dallinmackay" in model:
-        prompt = "lvngvncnt, " + item.get('prompt')
-    data = {"inputs": prompt, "negative_prompt": perm_negative_prompt, "options": options, "timeout": 120}
+    data = {"inputs": prompt, "negative_prompt": perm_negative_prompt, "options": options, "timeout": 90}
     api_data = json.dumps(data)
     print(f'API DATA: {api_data}')
     try:
@@ -27,11 +24,11 @@ def inferenceAPI(model, item):
         models = {
             "stabilityai/stable-diffusion-3.5-large-turbo": "Stable Diffusion 3.5 Turbo", 
             "black-forest-labs/FLUX.1-schnell": "Black Forest Schnell", 
-            "stabilityai/stable-diffusion-3.5-large": "Stable Diffusion 3.5 Large",
             "black-forest-labs/FLUX.1-dev": "Black Forest Developer"
         }
            
-        returnModel =  models[model]       
+        returnModel =  models[model]   
+        print(f'RESPONSE:  {response.content[:1000]}')    
         image_stream = BytesIO(response.content)
         image = Image.open(image_stream)      
         image.save(f'/tmp/{item.get('target')}-{returnModel.replace(' ', '-')}response.png', overwrite=True)
@@ -42,7 +39,7 @@ def inferenceAPI(model, item):
         
     except Exception as e:
         print(f'Error When Processing Image: {e}')
-        return 'Error When Calling Model'
+        return returnModel, f'An Error occurs when calling {returnModel}'
 
 def string_to_bool(value):
     if isinstance(value, str):
@@ -57,8 +54,11 @@ def inference(item):
     if string_to_bool(prompt_check(item.get('prompt'))):  
         return {"output": base64_img , "model": model, "NSFW": True}
     try:
-        if "stable-diffusion" in item.get('modelID') or 'forest' in item.get('modelID'):
+        if "large-turbo" in item.get('modelID') or 'forest' in item.get('modelID'):
             model, base64_img = inferenceAPI(item.get('modelID'), item)
+        elif "stabilityai/stable-diffusion-3.5-large" in item.get('modelID'):
+            model = 'Stable Diffusion 3.5 Large'
+            base64_img = stable_diffusion(item)
         elif "OpenAI Dalle3" in item.get('modelID'):
             model = 'OpenAI Dalle3' 
             base64_img = dalle3(item)
@@ -67,11 +67,11 @@ def inference(item):
             base64_img = nova_canvas(item)
         else:
             model, base64_img = item.get('modelID'), "Error in Inference"
-        if 'error' in base64_img:
+        if 'Error' in base64_img:
             return {"output": base64_img, "model": model}
         
         save_image(base64_img, item, model)
     except Exception as e:
-        print(f"An error occurred: {e}")
-        base64_img = f"An error occurred: {e}"
+        print(f"An Error occurred: {e}")
+        base64_img = f"An Error occurred: {e}"
     return {"output": base64_img, "model": model, "NSFW": False}

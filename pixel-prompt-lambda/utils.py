@@ -5,7 +5,7 @@ import openai
 import requests
 from PIL import Image
 from io import BytesIO
-from config import aws_id, aws_secret, openai_api_key
+from config import aws_id, aws_secret, openai_api_key, perm_negative_prompt
 
 def dalle3(item):
     openai.api_key = openai_api_key
@@ -61,4 +61,33 @@ def nova_canvas(item):
     image_stream = BytesIO(image_data)
     image = Image.open(image_stream)
     image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+    return base64_image
+
+def stable_diffusion(item):
+    model_id = 'stability.sd3-5-large-v1:0'
+    prompt = item.get('prompt')
+    body = json.dumps({
+        "prompt": prompt,
+        "mode": "text-to-image",
+        "aspect_ratio": "1:1",
+        "output_format": "png",
+        "seed": 0,
+        "negative_prompt": perm_negative_prompt
+    })
+    session = boto3.Session(aws_access_key_id=aws_id, aws_secret_access_key=aws_secret, region_name='us-west-2')
+    print('SESSION CREATED')
+    bedrock = session.client('bedrock-runtime')
+    response = bedrock.invoke_model(
+        body=body, modelId=model_id
+    )
+    response_body = json.loads(response.get("body").read())
+    base64_image = response_body.get("images")[0]
+    
+    image_data = base64.b64decode(base64_image)
+    image_stream = BytesIO(image_data)
+    
+    image = Image.open(image_stream)
+    
+    #For Image Checking Later image.save(f'/tmp/{item.get('target')}-{item.get("modelID")}response.png', overwrite=True)
+    
     return base64_image

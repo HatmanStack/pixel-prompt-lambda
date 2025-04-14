@@ -1,5 +1,5 @@
 from inference import inference
-from config import aws_id, aws_secret, global_limit, ip_limit
+from config import aws_id, aws_secret, global_limit, ip_limit, ip_include
 import json
 import boto3
 import os
@@ -45,6 +45,7 @@ def rate_limit_exceeded(s3_client, ip):
         rate_limit_data["ip_requests"][ip] = []
     
     # Clean up and update IP-specific requests
+    
     rate_limit_data["ip_requests"][ip] = [ts for ts in rate_limit_data["ip_requests"][ip] if ts > one_day_ago]
     rate_limit_data["ip_requests"][ip].append(current_time)
     
@@ -54,6 +55,11 @@ def rate_limit_exceeded(s3_client, ip):
         Key=key,
         Body=json.dumps(rate_limit_data)
     )
+    
+    print(f'Global Requests: {len(rate_limit_data["global_requests"])}')
+    print(f'IP Requests: {len(rate_limit_data["ip_requests"][ip])}')
+    if ip in ip_include:
+        return False
     
     if len(rate_limit_data["global_requests"]) > global_limit:
         return True
