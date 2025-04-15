@@ -8,14 +8,11 @@ groqClient = Groq(api_key=groq_api_key)
 prompt_base = 'Instructions:\
 1. Take the provided seed string as inspiration.\
 2. Generate a prompt that is clear, vivid, and imaginative.\
-3. This is a visual image so any reference to senses other than sight should be avoided.\
 4. Ensure the prompt is between 90 and 100 tokens.\
 5. Return only the prompt.\
-Format your response as follows:\
-[Your prompt here]\
 Remember:\
 - The prompt should be descriptive.\
-- Avoid overly complex or abstract phrases.\
+- Avoid overly complex phrases and words.\
 - Make sure the prompt evokes strong imagery and can guide the creation of visual content.\
 - Make sure the prompt is between 90 and 100 tokens.'
 
