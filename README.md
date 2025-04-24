@@ -25,13 +25,15 @@ Then zip all the files in the directory and upload to your Lambda function with 
 Include these in the environment variables of your lambda.  Create two functions to account for size cap of individual lambda functions.
 
    ```shell
-  AWS_ID=<ID>
-  AWS_SECRET=<secret>
-  GROQ_API_KEY=<key>
-  HF_TOKEN=<token>
-  GPC_API_KEY=<token>
-  RECRAFT_API_KEY=<token>
-  OPENAI_API_KEY=<token>
+   AWS_ID=<ID>
+   AWS_SECRET=<secret>
+   GROQ_API_KEY=<key>
+   HF_TOKEN=<token>
+   GPC_API_KEY=<token>
+   RECRAFT_API_KEY=<token>
+   OPENAI_API_KEY=<token>
+   STABILITY_API_KEY=<token>
+   BFL_API_KEY=<token>
    GLOBAL_LIMIT=<number>
    IP_LIMIT=<number>
    ```
@@ -44,8 +46,8 @@ All the models are SOTA and some are available on HuggingFace.
 
 - **Stable Diffusion Large**
 - **Stable Diffusion Turbo**
-- **Black Forest Schnell**
-- **Black Forest Developer**
+- **Black Forest Pro**
+- **Black Forest Dev**
 - **Recraft v3**
 - **OpenAI Dalle3**
 - **AWS Nova Canvas**

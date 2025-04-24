@@ -1,6 +1,0 @@
-  Found: Pillow==11.2.1
-  Found: boto3==1.37.33
-  Found: groq==0.22.0
-  Found: openai==1.74.0
-  Found: requests==2.32.3
-  Found: python-dotenv==1.1.0
