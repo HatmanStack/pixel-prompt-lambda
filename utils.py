@@ -1,11 +1,14 @@
 import boto3
 import json
 import base64
-import openai
 import requests
+import google.genai as genai
+from google.genai import types
 from PIL import Image
+import openai
+import time
 from io import BytesIO
-from config import aws_id, aws_secret, openai_api_key, perm_negative_prompt, stability_api_key, gpc_api_key, recraft_api_key, bfl_api_key
+from config import aws_id, aws_secret, openai_api_key, perm_negative_prompt, firework_api_key, stability_api_key, gpc_api_key, recraft_api_key, bfl_api_key
 
 def dalle3(item):
     openai.api_key = openai_api_key
@@ -123,7 +126,7 @@ def imagen_3(item):
         return base64_img
 
 def recraft_3(item):
-    client = OpenAI(
+    client = openai.OpenAI(
         base_url='https://external.api.recraft.ai/v1',
         api_key=recraft_api_key,
     )
@@ -155,7 +158,7 @@ def firework(item, model_id):
         if "Black Forest" in model_id: # Covers Dev and Schnell
             # Fireworks AI Configuration
             url_suffix = "flux-dev" if "Dev" in model_id else "flux-pro-1.1"
-            
+            print(f"Firework URL Suffix: {url_suffix}")
             response = requests.post(
                 f'https://api.us1.bfl.ai/v1/{url_suffix}',
                 headers={
@@ -167,15 +170,35 @@ def firework(item, model_id):
                     'prompt': prompt,
                     'width': 1024,
                     'height': 1024,
+                    "output_format": "png",
                 },
             ).json()
-            
-            image_url = response.id
-            print(f'IMAGE URL: {image_url}')
+            print(f"Firework response: {response}")
+            response_id = response["id"]
+            image_url = ''
+            while True:
+                time.sleep(0.5)
+                result = requests.get(
+                    'https://api.us1.bfl.ai/v1/get_result',
+                    headers={
+                        'accept': 'application/json',
+                        'x-key': bfl_api_key,
+                    },
+                    params={
+                        'id': response_id,
+                    },
+                ).json()
+                if result["status"] == "Ready":
+                    print(f"Result: {result['result']['sample']}")
+                    image_url = result['result']['sample']
+                    break
+                else:
+                    print(f"Status: {result['status']}")
             image_response = requests.get(image_url)
             if image_response.status_code == 200:
                 print('Status from BFL 200')
                 base64_img = base64.b64encode(image_response.content).decode('utf-8')
+                return base64_img
             else:
                 print(f"Error from {model_id}: {response.status_code} - {response.text}")
 
